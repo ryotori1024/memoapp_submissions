@@ -7,51 +7,45 @@ require 'cgi'
 
 Bundler.require
 
-memo_hash = {}
-
-get '/memos/top' do
+get '/memos' do
+  memo_hash = {}
   memo_hash = json_file_open
 
-  # ハッシュに格納されたメモデータのリンクを表示
-  @t = ''
-  if memo_hash['memos'].empty?
-    @t = '<p>メモがありません</p>'
-  else
-    memo_hash['memos'].each do |memo|
-      @t += "<a href=\"/memos/#{memo['id']}/show\"><p>#{memo['title']}</p><br>"
-    end
+  # トップ画面に表示するデータをセット
+  @id = []
+  @title = []
+  @memos_length = memo_hash['memos'].length
+
+  memo_hash['memos'].each do |memo|
+    @id.push(memo['id'])
+    @title.push(memo['title'])
   end
 
-  @t += '<a href="/new">追加</a>'
   erb :top
 end
 
-get '/memos/:id/show' do
+get '/memos/:id/detail' do
   # URLからクリックしたメモのタイトルに対応するIDを取得し
   # 表示するメモを指定するインデックスとして設定
-  id = params[:id]
-  memo_index = id.to_i - 1
+  memo_index = params[:id].to_i - 1
 
+  memo_hash = {}
   memo_hash = json_file_open
 
-  @t = ''
-  @t += "<h2>#{memo_hash['memos'][memo_index]['title']}</h2>"
-  @t += "<p>#{memo_hash['memos'][memo_index]['contents']}</p>"
-  @t += "<a href=\"/memos/#{id}/edit\">編集</a><br>"
-  @t += "<form action=\"/memos/#{id}/del\" method=\"post\">"
-  @t += '<input type="submit" value="削除">'
-  @t += "<input type=\"hidden\" name=\"id\" value=\"#{id}\">"
-  @t += '<input type="hidden" name="_method" value="delete">'
-  @t += '</form>'
+  # 内容閲覧画面で表示するデータをセット
+  @id = params[:id]
+  @title = memo_hash['memos'][memo_index]['title']
+  @contents = memo_hash['memos'][memo_index]['contents']
 
   erb :show
 end
 
-get '/new' do
+get '/memos/new' do
   erb :new
 end
 
-post '/new_' do
+post '/new' do
+  memo_hash = {}
   memo_hash = json_file_open
 
   max_id = 0
@@ -70,38 +64,31 @@ post '/new_' do
 
   json_file_write(memo_hash)
 
-  redirect '/memos/top'
+  redirect '/memos'
 end
 
 get '/memos/:id/edit' do
-  id = params[:id]
-
+  memo_hash = {}
   memo_hash = json_file_open
 
-  @t = ''
   memo_hash['memos'].each do |memo|
-    next unless memo['id'] == id
+    next unless memo['id'] == params[:id]
 
-    # URLに含まれているメモIDと一致するIDをハッシュから探し出し、編集画面のタイトルと内容のテキストに表示する
-    @t += "<form action=\"/edit_/#{id}\" method=\"post\">"
-    @t += '<input id="hidden" type="hidden" name="_method" value="patch">'
-    @t += '<h2>タイトル</h2><br>'
-    @t += "<input type=\"text\" size=\"30\" maxlength=\"20\" value=\"#{memo['title']}\" name=\"title\"><br>"
-    @t += '<h3>内容</h3><br>'
-    @t += "<textarea cols=\"40\" rows=\"20\" maxlength=\"100\" name=\"contents\">#{memo['contents']}</textarea><br>"
-    @t += '<input type="submit" value="保存">'
-    @t += '</form>'
-    @t += "<a href=\"/memos/#{id}/show\">キャンセル</a>"
+    # URLに含まれているメモIDに対応するメモのタイトルと内容をインスタンス変数にセット
+    @id = params[:id]
+    @title = memo['title']
+    @contents = memo['contents']
     break
   end
 
   erb :edit
 end
 
-patch '/edit_/:id' do
+patch '/memos/:id' do
   # URLから編集するメモのデータを取り出す
   id = params[:id]
 
+  memo_hash = {}
   memo_hash = json_file_open
 
   # 編集画面で入力したメモのタイトルと内容をサニタイジングする
@@ -120,17 +107,18 @@ patch '/edit_/:id' do
 
   path = '/memos/'
   path << id
-  path << '/show'
+  path << '/detail'
 
   redirect path
 end
 
-delete '/memos/:id/del' do
+delete '/memos/:id' do
   # URLから削除するメモのIDを取り出し
   # 削除するメモのインデックスを指定
   id = params[:id].to_i
   memo_index = id - 1
 
+  memo_hash = {}
   memo_hash = json_file_open
 
   # 削除したメモデータから数えていくつ分のメモデータのIDを更新するかを求める
@@ -148,18 +136,14 @@ delete '/memos/:id/del' do
     end
   end
 
-  File.open('memos.json', 'w') do |file|
-    JSON.dump(memo_hash, file)
-  end
+  json_file_write(memo_hash)
 
-  redirect '/memos/top'
+  redirect '/memos'
 end
 
 # メモデータが格納されているJSONファイルを開き、ハッシュに格納するメソッド
 def json_file_open
-  f = File.open('memos.json')
-  json_memo = f.read
-  f.close
+  json_memo = File.read('memos.json')
   JSON.parse(json_memo)
 end
 

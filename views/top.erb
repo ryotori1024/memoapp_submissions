@@ -1,1 +1,11 @@
-<%= @t %>
+<% if @memos_length == 0 %>
+  <p>メモがありません</p>
+<% else %>
+  <% index = 0 %>
+  <% @memos_length.times do %>
+    <a href="/memos/<%= @id[index] %>/detail"><%= @title[index] %></a><br>
+    <% index += 1 %>
+  <% end %>
+<% end %>
+
+<a href="/memos/new">追加</a>
