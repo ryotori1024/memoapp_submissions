@@ -1,11 +1,11 @@
 <h1>編集画面</h1><br>
 
-<form action="/memos/<%= @id %>" method="post">
+<form action="/memos/<%= @memos['id'] %>" method="post">
 <input id="hidden" type="hidden" name="_method" value="patch">
 <h2>タイトル</h2><br>
-<input type="text" size="30" maxlength="20" value="<%= @title %>" name="title"><br>
+<input type="text" size="30" maxlength="20" value="<%= @memos['title'] %>" name="title"><br>
 <h3>内容</h3><br>
-<textarea cols="40" rows="20" maxlength="100" name="contents"><%= @contents %></textarea><br>
+<textarea cols="40" rows="20" maxlength="100" name="contents"><%= @memos['contents'] %></textarea><br>
 <input type="submit" value="保存">
 </form>
-<a href="/memos/<%= @id %>/detail">キャンセル</a>
+<a href="/memos/<%= @memos['id'] %>">キャンセル</a>

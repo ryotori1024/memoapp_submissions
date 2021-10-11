@@ -8,34 +8,19 @@ require 'cgi'
 Bundler.require
 
 get '/memos' do
-  memo_hash = {}
   memo_hash = json_file_open
 
   # トップ画面に表示するデータをセット
-  @id = []
-  @title = []
-  @memos_length = memo_hash['memos'].length
-
-  memo_hash['memos'].each do |memo|
-    @id.push(memo['id'])
-    @title.push(memo['title'])
-  end
+  @memos = memo_hash['memos']
 
   erb :top
 end
 
-get '/memos/:id/detail' do
-  # URLからクリックしたメモのタイトルに対応するIDを取得し
-  # 表示するメモを指定するインデックスとして設定
-  memo_index = params[:id].to_i - 1
-
-  memo_hash = {}
+get %r{/memos/([0-9]+)} do |id|
   memo_hash = json_file_open
 
-  # 内容閲覧画面で表示するデータをセット
-  @id = params[:id]
-  @title = memo_hash['memos'][memo_index]['title']
-  @contents = memo_hash['memos'][memo_index]['contents']
+  # URLに含まれているメモIDに対応するメモをインスタンス変数にセット
+  @memos = memo_hash['memos'].find { |memo| memo['id'] == id }
 
   erb :show
 end
@@ -45,22 +30,14 @@ get '/memos/new' do
 end
 
 post '/new' do
-  memo_hash = {}
   memo_hash = json_file_open
 
-  max_id = 0
-  memo_hash['memos'].each do |memo|
-    # 格納されているメモの中で最大のIDを求め、その数値+1を新しく追加するメモのIDとする
-    max_id = memo['id'].to_i if memo['id'].to_i > max_id
-  end
-  max_id += 1
-
-  # 新規画面で入力したメモのタイトルと内容をサニタイジングする
-  title_sanit = CGI.escapeHTML(params[:title])
-  contents_sanit = CGI.escapeHTML(params[:contents])
+  # 格納されているメモの中で最大のIDを求め、その数値+1を新しく追加するメモのIDとする
+  max_id = memo_hash['memos'].map { |memo| memo['id'] }.max.to_i + 1
 
   # 新規画面で入力したメモのタイトルと内容をハッシュに格納する
-  memo_hash['memos'].push({ "id": max_id.to_s, "title": title_sanit, "contents": contents_sanit })
+  memo_hash['memos'].push({ "id": max_id.to_s, "title": CGI.escapeHTML(params[:title]),
+                            "contents": CGI.escapeHTML(params[:contents]) })
 
   json_file_write(memo_hash)
 
@@ -68,71 +45,37 @@ post '/new' do
 end
 
 get '/memos/:id/edit' do
-  memo_hash = {}
   memo_hash = json_file_open
 
-  memo_hash['memos'].each do |memo|
-    next unless memo['id'] == params[:id]
-
-    # URLに含まれているメモIDに対応するメモのタイトルと内容をインスタンス変数にセット
-    @id = params[:id]
-    @title = memo['title']
-    @contents = memo['contents']
-    break
-  end
+  # URLに含まれているメモIDに対応するメモをインスタンス変数にセット
+  @memos = memo_hash['memos'].find { |memo| memo['id'] == params[:id] }
 
   erb :edit
 end
 
 patch '/memos/:id' do
-  # URLから編集するメモのデータを取り出す
-  id = params[:id]
-
-  memo_hash = {}
   memo_hash = json_file_open
 
-  # 編集画面で入力したメモのタイトルと内容をサニタイジングする
-  title_sanit = CGI.escapeHTML(params[:title])
-  contents_sanit = CGI.escapeHTML(params[:contents])
-
   memo_hash['memos'].each do |memo|
-    next unless memo['id'] == id
+    next unless memo['id'] == params[:id]
 
     # URLから取得したIDとハッシュのIDが等しければ、編集したタイトルと内容をハッシュに格納
-    memo['title'] = title_sanit
-    memo['contents'] = contents_sanit
+    memo['title'] = CGI.escapeHTML(params[:title])
+    memo['contents'] = CGI.escapeHTML(params[:contents])
   end
 
   json_file_write(memo_hash)
 
-  path = '/memos/'
-  path << id
-  path << '/detail'
-
-  redirect path
+  redirect "/memos/#{params[:id]}"
 end
 
 delete '/memos/:id' do
-  # URLから削除するメモのIDを取り出し
-  # 削除するメモのインデックスを指定
-  id = params[:id].to_i
-  memo_index = id - 1
-
-  memo_hash = {}
   memo_hash = json_file_open
 
-  # 削除したメモデータから数えていくつ分のメモデータのIDを更新するかを求める
-  times = memo_hash['memos'].length - memo_index - 1
-  # 該当するインデックスのメモデータを削除
-  memo_hash['memos'].delete_at(memo_index)
-
-  # メモデータを削除した場合に、IDが中抜けになり整合が取れなくなるのを防ぐために
-  # 削除したメモ以降のデータのIDを-1する
-  if times != 0
-    # timesが0(一番後ろのメモデータを削除)の場合は行わない
-    times.times do
-      memo_hash['memos'][memo_index]['id'] = (memo_hash['memos'][memo_index]['id'].to_i - 1).to_s
-      memo_index += 1
+  memo_hash['memos'].each_with_index do |memo, index|
+    if memo['id'] == params[:id]
+      # URLに含まれるメモIDと同じIDのメモを探し、そのインデックスのメモを削除する
+      memo_hash['memos'].delete_at(index)
     end
   end
 

@@ -1,10 +1,8 @@
-<% if @memos_length == 0 %>
+<% if @memos.length == 0 %>
   <p>メモがありません</p>
 <% else %>
-  <% index = 0 %>
-  <% @memos_length.times do %>
-    <a href="/memos/<%= @id[index] %>/detail"><%= @title[index] %></a><br>
-    <% index += 1 %>
+  <% @memos.each do |memo| %>
+    <a href="/memos/<%= memo['id'] %>"><%= memo['title'] %></a><br>
   <% end %>
 <% end %>
 
