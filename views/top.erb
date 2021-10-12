@@ -2,7 +2,7 @@
   <p>メモがありません</p>
 <% else %>
   <% @memos.each do |memo| %>
-    <a href="/memos/<%= memo['id'] %>"><%= memo['title'] %></a><br>
+    <a href="/memos/<%= memo['id'] %>"><%= CGI.escapeHTML(memo['title']) %></a><br>
   <% end %>
 <% end %>
 

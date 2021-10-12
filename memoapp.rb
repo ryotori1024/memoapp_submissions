@@ -3,7 +3,6 @@ require 'net/http'
 require 'uri'
 require 'json'
 require 'bundler'
-require 'cgi'
 
 Bundler.require
 
@@ -20,7 +19,7 @@ get %r{/memos/([0-9]+)} do |id|
   memo_hash = json_file_open
 
   # URLに含まれているメモIDに対応するメモをインスタンス変数にセット
-  @memos = memo_hash['memos'].find { |memo| memo['id'] == id }
+  @memo = memo_hash['memos'].find { |memo| memo['id'] == id }
 
   erb :show
 end
@@ -29,15 +28,15 @@ get '/memos/new' do
   erb :new
 end
 
-post '/new' do
+post '/memos/new' do
   memo_hash = json_file_open
 
   # 格納されているメモの中で最大のIDを求め、その数値+1を新しく追加するメモのIDとする
   max_id = memo_hash['memos'].map { |memo| memo['id'] }.max.to_i + 1
 
   # 新規画面で入力したメモのタイトルと内容をハッシュに格納する
-  memo_hash['memos'].push({ "id": max_id.to_s, "title": CGI.escapeHTML(params[:title]),
-                            "contents": CGI.escapeHTML(params[:contents]) })
+  memo_hash['memos'].push({ "id": max_id.to_s, "title": params[:title],
+                            "contents": params[:contents] })
 
   json_file_write(memo_hash)
 
@@ -48,7 +47,7 @@ get '/memos/:id/edit' do
   memo_hash = json_file_open
 
   # URLに含まれているメモIDに対応するメモをインスタンス変数にセット
-  @memos = memo_hash['memos'].find { |memo| memo['id'] == params[:id] }
+  @memo = memo_hash['memos'].find { |memo| memo['id'] == params[:id] }
 
   erb :edit
 end
@@ -56,13 +55,10 @@ end
 patch '/memos/:id' do
   memo_hash = json_file_open
 
-  memo_hash['memos'].each do |memo|
-    next unless memo['id'] == params[:id]
-
-    # URLから取得したIDとハッシュのIDが等しければ、編集したタイトルと内容をハッシュに格納
-    memo['title'] = CGI.escapeHTML(params[:title])
-    memo['contents'] = CGI.escapeHTML(params[:contents])
-  end
+  # URLに含まれているメモIDに対応するメモを編集する
+  memo = memo_hash['memos'].find { |m| m['id'] == params[:id] }
+  memo['title'] = params[:title]
+  memo['contents'] = params[:contents]
 
   json_file_write(memo_hash)
 
@@ -72,12 +68,8 @@ end
 delete '/memos/:id' do
   memo_hash = json_file_open
 
-  memo_hash['memos'].each_with_index do |memo, index|
-    if memo['id'] == params[:id]
-      # URLに含まれるメモIDと同じIDのメモを探し、そのインデックスのメモを削除する
-      memo_hash['memos'].delete_at(index)
-    end
-  end
+  # URLに含まれるメモIDと同じIDのメモを削除する
+  memo_hash['memos'].delete_if { |memo| memo['id'] == params[:id] }
 
   json_file_write(memo_hash)
 
