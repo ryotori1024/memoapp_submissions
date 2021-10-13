@@ -1,0 +1,12 @@
+<h1>内容閲覧画面</h1>
+
+<h2><%= CGI.escapeHTML(@memo['title']) %></h2>
+<p><%= CGI.escapeHTML(@memo['contents']) %></p>
+<a href="/memos/<%= @memo['id'] %>/edit">編集</a><br>
+<form action="/memos/<%= @memo['id'] %>" method="post">
+<input type="submit" value="削除">
+<input type="hidden" name="id" value="<%= @id %>">
+<input type="hidden" name="_method" value="delete">
+</form>
+
+<a href="/memos">トップへ戻る</a>
