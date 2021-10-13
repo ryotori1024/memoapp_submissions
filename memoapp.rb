@@ -28,7 +28,7 @@ get '/memos/new' do
   erb :new
 end
 
-post '/memos/new' do
+post '/memos' do
   memo_hash = json_file_open
 
   # 格納されているメモの中で最大のIDを求め、その数値+1を新しく追加するメモのIDとする
